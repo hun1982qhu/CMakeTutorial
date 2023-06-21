@@ -21,23 +21,20 @@ def execute_command(cmdstring, cwd=None, timeout=None, shell=False):
         shell {bool} -- 是否通过shell运行 (default: {False})
     """
 
-    if shell:
-        cmdstring_list = cmdstring
-    else:
-        cmdstring_list = shlex.split(cmdstring)
+    cmdstring_list = cmdstring if shell else shlex.split(cmdstring)
     if timeout:
         end_time = datetime.datetime.now() + datetime.timedelta(seconds=timeout)
-    
+
     # 没有指定标准输出和错误输出的管道，因此会打印到屏幕上；
     sub = subprocess.Popen(cmdstring_list, cwd=cwd, stdin=subprocess.PIPE,shell=shell,bufsize=4096)
-    
-    # subprocess.poll()方法：检查子进程是否结束了，如果结束了，设定并返回码，放在subprocess.returncode变量中 
+
+    # subprocess.poll()方法：检查子进程是否结束了，如果结束了，设定并返回码，放在subprocess.returncode变量中
     while sub.poll() is None:
         time.sleep(0.1)
         if timeout:
             if end_time <= datetime.datetime.now():
-                raise Exception("Timeout：%s"%cmdstring)
-        
+                raise Exception(f"Timeout：{cmdstring}")
+
     return sub.returncode
 
 def build_library():
@@ -45,20 +42,20 @@ def build_library():
     cmake_prefix_path = envs.get('CMAKE_PREFIX_PATH', None)
     if cmake_prefix_path is None:
         raise EnvironmentError("Please specify CMAKE_PREFIX_PATH env.")
-    
+
     config_command = "cmake -DCMAKE_PREFIX_PATH={} -S {} -B {}"
     path_to_source = cwd
     path_to_build = os.path.join(cwd, "build")
-    
+
     if os.path.exists(path_to_build):
         shutil.rmtree(path_to_build)
     config_command = config_command.format(cmake_prefix_path, path_to_source, path_to_build)
-    
+
     code = execute_command(config_command)
     if code != 0:
         raise RuntimeError("Run configure command fail.")
-    
-    build_command = "cmake --build {}".format(os.path.join(cwd, "build"))
+
+    build_command = f'cmake --build {os.path.join(cwd, "build")}'
     code = execute_command(build_command)
     if code != 0:
         raise RuntimeError("Run build Command fail.")
